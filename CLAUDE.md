@@ -208,3 +208,13 @@ Wait for consent; never auto-create ADRs. Group related decisions (stacks, authe
 
 ## Code Standards
 See `.specify/memory/constitution.md` for code quality, testing, performance, security, and architecture principles.
+
+## Active Technologies
+- Node.js LTS (18+ or 20+), Docusaurus 3.x, Python examples using rclpy for ROS 2 Humble Hawksbill + Docusaurus (classic template), Node.js, npm, ROS 2 Humble Hawksbill, rclpy (001-physical-ai-ros2)
+- File-based (Markdown/MDX files), no database required (001-physical-ai-ros2)
+- Markdown / MDX format for Docusaurus 3.x + Docusaurus 3.x, Node.js LTS (18+ or 20+), Python examples using rclpy for ROS 2 Humble Hawksbill (001-digital-twin)
+- JavaScript/Node.js for Docusaurus configuration + Docusaurus 3.x, Node.js LTS (18+ or 20+), npm (002-docusaurus-build-rectification)
+- File-based configuration (docusaurus.config.js) (002-docusaurus-build-rectification)
+
+## Recent Changes
+- 001-physical-ai-ros2: Added Node.js LTS (18+ or 20+), Docusaurus 3.x, Python examples using rclpy for ROS 2 Humble Hawksbill + Docusaurus (classic template), Node.js, npm, ROS 2 Humble Hawksbill, rclpy

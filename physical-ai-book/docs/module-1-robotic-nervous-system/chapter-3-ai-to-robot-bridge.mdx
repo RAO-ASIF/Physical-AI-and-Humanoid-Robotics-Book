@@ -1,0 +1,337 @@
+---
+title: Chapter 3 - Connecting AI Agents to Robot Bodies
+---
+
+# Chapter 3: Connecting AI Agents to Robot Bodies
+
+## Learning Objectives
+
+After completing this chapter, you will be able to:
+- Implement Python agents using rclpy that interact with robot systems
+- Control robot behavior via ROS 2 interfaces
+- Understand the introduction to URDF for humanoid structure
+- Explain the relationship between URDF, controllers, and motion
+- Describe how software decisions map to physical movement
+- Implement security best practices for robot communication
+- Add Python/rclpy code examples demonstrating AI-robot integration
+
+## Introduction
+
+In the previous chapters, we explored ROS 2 as the robotic nervous system and its communication primitives. Now we'll examine how to bridge the gap between AI algorithms and physical robot behavior. This connection is where the intelligence of AI meets the embodiment of robotics, creating truly capable robotic systems.
+
+## Python Agents with rclpy
+
+rclpy is the Python client library for ROS 2, providing a Python API for creating ROS 2 nodes, publishers, subscribers, services, and actions. It's the primary interface for connecting Python-based AI agents to robotic systems.
+
+### Basic Node Structure
+
+```python
+import rclpy
+from rclpy.node import Node
+
+class AIAgentNode(Node):
+    def __init__(self):
+        super().__init__('ai_agent_node')
+        self.get_logger().info('AI Agent node has started')
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = AIAgentNode()
+
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+### Subscribing to Robot Data
+
+AI agents often need to receive information from the robot's sensors:
+
+```python
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import JointState
+from geometry_msgs.msg import Twist
+
+class PerceptionAgent(Node):
+    def __init__(self):
+        super().__init__('perception_agent')
+
+        # Subscribe to joint states
+        self.joint_subscription = self.create_subscription(
+            JointState,
+            '/joint_states',
+            self.joint_callback,
+            10)
+
+        # Subscribe to robot odometry
+        self.odom_subscription = self.create_subscription(
+            Twist,
+            '/cmd_vel',
+            self.odom_callback,
+            10)
+
+        self.latest_joint_data = None
+        self.latest_odom_data = None
+
+    def joint_callback(self, msg):
+        self.latest_joint_data = msg
+        self.get_logger().info(f'Received joint data for {len(msg.name)} joints')
+
+    def odom_callback(self, msg):
+        self.latest_odom_data = msg
+        self.get_logger().info(f'Received odometry: linear={msg.linear.x}, angular={msg.angular.z}')
+```
+
+### Publishing Commands to the Robot
+
+AI agents can send commands to control robot behavior:
+
+```python
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import Twist
+from std_msgs.msg import Float64MultiArray
+import time
+
+class ControlAgent(Node):
+    def __init__(self):
+        super().__init__('control_agent')
+
+        # Publisher for velocity commands
+        self.cmd_vel_publisher = self.create_publisher(
+            Twist,
+            '/cmd_vel',
+            10)
+
+        # Publisher for joint position commands
+        self.joint_cmd_publisher = self.create_publisher(
+            Float64MultiArray,
+            '/joint_group_position_controller/commands',
+            10)
+
+        # Timer to send commands periodically
+        self.timer = self.create_timer(0.1, self.send_commands)
+
+    def send_commands(self):
+        # Send velocity command
+        cmd_vel = Twist()
+        cmd_vel.linear.x = 0.5  # Move forward at 0.5 m/s
+        cmd_vel.angular.z = 0.2  # Turn left at 0.2 rad/s
+        self.cmd_vel_publisher.publish(cmd_vel)
+
+        # Send joint position command
+        joint_cmd = Float64MultiArray()
+        joint_cmd.data = [0.1, 0.2, 0.3]  # Example joint positions
+        self.joint_cmd_publisher.publish(joint_cmd)
+```
+
+## Controlling Robot Behavior via ROS 2 Interfaces
+
+The key to effective AI-robot integration is understanding how to use ROS 2 interfaces to control robot behavior:
+
+### Using Services for Synchronous Control
+
+```python
+from example_interfaces.srv import SetBool
+import rclpy
+from rclpy.node import Node
+
+class BehaviorController(Node):
+    def __init__(self):
+        super().__init__('behavior_controller')
+
+        # Create client for a service
+        self.emergency_stop_client = self.create_client(
+            SetBool,
+            '/emergency_stop')
+
+        while not self.emergency_stop_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('Emergency stop service not available, waiting...')
+
+    def trigger_emergency_stop(self):
+        request = SetBool.Request()
+        request.data = True
+        future = self.emergency_stop_client.call_async(request)
+        return future
+```
+
+### Using Actions for Complex Behaviors
+
+```python
+from rclpy.action import ActionClient
+from rclpy.node import Node
+from control_msgs.action import FollowJointTrajectory
+import rclpy
+
+class TrajectoryController(Node):
+    def __init__(self):
+        super().__init__('trajectory_controller')
+        self._action_client = ActionClient(
+            self,
+            FollowJointTrajectory,
+            'joint_trajectory_controller/follow_joint_trajectory')
+
+    def send_trajectory(self, joint_names, positions, times):
+        goal_msg = FollowJointTrajectory.Goal()
+        goal_msg.trajectory.joint_names = joint_names
+
+        # Create trajectory points
+        for pos, time_point in zip(positions, times):
+            point = JointTrajectoryPoint()
+            point.positions = pos
+            point.time_from_start.sec = time_point
+            goal_msg.trajectory.points.append(point)
+
+        self._action_client.wait_for_server()
+        return self._action_client.send_goal_async(goal_msg)
+```
+
+## Introduction to URDF for Humanoid Structure
+
+URDF (Unified Robot Description Format) is an XML format for representing a robot model. It describes the physical and visual properties of a robot, including links, joints, and their relationships.
+
+### Basic URDF Structure
+
+```xml
+<?xml version="1.0"?>
+<robot name="simple_humanoid">
+  <!-- Base link -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.5 0.5 0.2"/>
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.5 0.5 0.2"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- Hip joint -->
+  <joint name="hip_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="left_leg"/>
+    <origin xyz="0 0.1 -0.3"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-1.57" upper="1.57" effort="100" velocity="1"/>
+  </joint>
+
+  <!-- Left leg link -->
+  <link name="left_leg">
+    <visual>
+      <geometry>
+        <cylinder radius="0.05" length="0.4"/>
+      </geometry>
+      <origin xyz="0 0 -0.2"/>
+    </visual>
+  </link>
+</robot>
+```
+
+## Relationship Between URDF, Controllers, and Motion
+
+The relationship between URDF, controllers, and motion is fundamental to understanding how software decisions map to physical movement:
+
+1. **URDF** defines the robot's structure and kinematic relationships
+2. **Controllers** translate high-level commands into joint-level commands
+3. **Motion** is the physical result of actuator commands
+
+### Example: Mapping Software Commands to Physical Movement
+
+When an AI agent sends a command like "lift left arm", the following happens:
+
+1. The AI agent sends a trajectory goal to the arm controller
+2. The controller uses the URDF model to understand the kinematic chain
+3. Inverse kinematics converts the desired end-effector position to joint angles
+4. The controller sends individual joint commands to the actuators
+5. The physical robot moves according to the commands
+
+## How Software Decisions Map to Physical Movement
+
+Understanding this mapping is crucial for creating effective AI-robot systems:
+
+### Timing Considerations
+- Software loops must account for physical system response times
+- Real-time constraints apply to safety-critical operations
+- Latency in perception-action cycles affects robot performance
+
+### Safety Implications
+- Software must respect physical limits of the robot
+- Emergency stop functionality must be reliable and fast
+- Collision avoidance systems must be robust
+
+### Performance Optimization
+- Efficient algorithms reduce computational load
+- Proper QoS settings ensure reliable communication
+- Appropriate control frequencies balance performance and resource usage
+
+## Security Best Practices for Robot Communication
+
+As robots become more connected, security becomes increasingly important:
+
+### Network Security
+- Use secure communication protocols when possible
+- Implement authentication for robot interfaces
+- Segment robot networks from other systems
+
+### Access Controls
+- Limit which nodes can publish to critical topics
+- Use ROS 2's security features when available
+- Implement role-based access for different system components
+
+### Example: Secure Node Implementation
+
+```python
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+
+class SecureControlNode(Node):
+    def __init__(self):
+        super().__init__('secure_control_node')
+
+        # Validate messages before processing
+        self.subscription = self.create_subscription(
+            String,
+            'command_topic',
+            self.command_callback,
+            10)
+
+        self.publisher = self.create_publisher(
+            String,
+            'status_topic',
+            10)
+
+    def command_callback(self, msg):
+        # Validate the command before executing
+        if self.validate_command(msg.data):
+            # Execute the validated command
+            self.execute_command(msg.data)
+        else:
+            self.get_logger().error(f'Invalid command received: {msg.data}')
+
+    def validate_command(self, command):
+        # Implement validation logic
+        allowed_commands = ['move_forward', 'turn_left', 'stop']
+        return command in allowed_commands
+
+    def execute_command(self, command):
+        # Execute the validated command
+        self.get_logger().info(f'Executing command: {command}')
+```
+
+## Summary
+
+Connecting AI agents to robot bodies requires understanding the full stack from high-level AI algorithms to physical actuation. The key is using ROS 2's communication primitives appropriately, understanding the robot's URDF model, and ensuring that software decisions are translated safely and effectively into physical movement.
+
+With these concepts, you now have a complete understanding of ROS 2 as the robotic nervous system, its communication primitives, and how to connect AI agents to robot bodies. This foundation provides the knowledge needed to build sophisticated robotic systems that combine artificial intelligence with physical embodiment.
