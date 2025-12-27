@@ -38,7 +38,7 @@ function HomepageHeader() {
           </div>
           <div className={styles.visualSection}>
             <img
-              src="img/hero-placeholder.svg"
+              src="hero-placeholder.svg"
               alt="Robotic Brain Illustration"
               className={styles.visualAsset}
             />
