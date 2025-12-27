@@ -12,16 +12,37 @@ function HomepageHeader() {
   return (
     <header className={clsx('hero hero--primary', styles.heroBanner)}>
       <div className="container">
-        <Heading as="h1" className="hero__title">
-          {siteConfig.title}
-        </Heading>
-        <p className="hero__subtitle">{siteConfig.tagline}</p>
-        <div className={styles.buttons}>
-          <Link
-            className="button button--secondary button--lg"
-            to="/docs/intro">
-            Docusaurus Tutorial - 5min ⏱️
-          </Link>
+        <div className={styles.heroContent}>
+          <div className={styles.textSection}>
+            <Heading as="h1" className="hero__title">
+              {siteConfig.title}
+            </Heading>
+            <p className={styles.heroSubtitle}>Physical AI & Humanoid Robotics</p>
+            <div className={styles.buttons}>
+              <Link
+                className="button button--primary button--lg"
+                to="/docs/intro">
+                START READING
+              </Link>
+              <Link
+                className="button button--secondary button--lg"
+                to="https://github.com/panaverse/Physical-AI-and-Humanoid-Robotics-Book">
+                Explore Project GitHub
+              </Link>
+            </div>
+            <div className={styles.githubLink}>
+              <Link to="https://github.com/panaverse/Physical-AI-and-Humanoid-Robotics-Book">
+                // Open Source
+              </Link>
+            </div>
+          </div>
+          <div className={styles.visualSection}>
+            <img
+              src="img/hero-placeholder.svg"
+              alt="Robotic Brain Illustration"
+              className={styles.visualAsset}
+            />
+          </div>
         </div>
       </div>
     </header>
