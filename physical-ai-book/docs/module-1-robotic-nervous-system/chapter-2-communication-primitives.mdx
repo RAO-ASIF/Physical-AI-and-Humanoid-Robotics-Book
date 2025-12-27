@@ -1,0 +1,239 @@
+---
+title: Chapter 2 - ROS 2 Communication Primitives
+---
+
+# Chapter 2: ROS 2 Communication Primitives
+
+## Learning Objectives
+
+After completing this chapter, you will be able to:
+- Explain the differences between Nodes, Topics, Services, and Actions
+- Identify appropriate use cases for Topics vs Services vs Actions
+- Implement simple examples using Python and rclpy
+- Understand message passing and real-time considerations
+- Describe when to use each communication primitive
+- Apply humanoid-oriented examples to communication patterns
+
+## Introduction
+
+In Chapter 1, we established ROS 2 as the robotic nervous system. Now we'll dive deeper into the specific mechanisms that enable communication between different components of your robotic system. ROS 2 provides four primary communication primitives: Nodes, Topics, Services, and Actions. Each serves a specific purpose and understanding when to use each is crucial for effective robot design.
+
+## Nodes: The Foundation of ROS 2
+
+Nodes are the fundamental building blocks of any ROS 2 system. Think of them as individual organs in the robotic body—each responsible for a specific function but working together as part of the larger system.
+
+A node:
+- Runs as a separate process
+- Contains the actual application logic
+- Can communicate with other nodes through the other primitives
+- Has a unique name within the ROS graph
+- Can be written in different programming languages (C++, Python, etc.)
+
+```python
+import rclpy
+from rclpy.node import Node
+
+class ExampleNode(Node):
+    def __init__(self):
+        super().__init__('example_node')
+        self.get_logger().info('Example node has started')
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = ExampleNode()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+## Topics: The Nervous System's Information Highway
+
+Topics implement a publish/subscribe communication pattern, where one or more nodes publish data and one or more nodes subscribe to that data. This is analogous to sensory information flowing through the nervous system.
+
+Topics are ideal for:
+- Sensor data streams (camera images, LIDAR scans, IMU data)
+- Robot state information (joint positions, battery levels)
+- Continuous data that multiple nodes might need
+
+### Humanoid Example: Joint State Topic
+
+In a humanoid robot, joint states are typically published on a topic like `/joint_states`. Multiple systems (controllers, visualizers, safety monitors) can subscribe to this topic to receive real-time information about joint positions, velocities, and efforts.
+
+```python
+from sensor_msgs.msg import JointState
+import rclpy
+from rclpy.node import Node
+
+class JointStatePublisher(Node):
+    def __init__(self):
+        super().__init__('joint_state_publisher')
+        self.publisher = self.create_publisher(JointState, '/joint_states', 10)
+        self.timer = self.create_timer(0.1, self.publish_joint_states)  # 10 Hz
+
+    def publish_joint_states(self):
+        msg = JointState()
+        msg.name = ['left_hip', 'left_knee', 'left_ankle']  # Example joint names
+        msg.position = [0.0, 0.0, 0.0]  # Example positions
+        self.publisher.publish(msg)
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = JointStatePublisher()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+```
+
+## Services: Request/Response Communication
+
+Services implement a request/response pattern, where a client sends a request to a server and waits for a response. This is similar to asking a specific question and waiting for an answer.
+
+Services are ideal for:
+- Operations that have a clear beginning and end
+- Commands that should return a result
+- Synchronous operations that need to complete before continuing
+
+### Humanoid Example: Walking Service
+
+A humanoid robot might have a service that plans and executes a walking sequence:
+
+```python
+from example_interfaces.srv import Trigger
+import rclpy
+from rclpy.node import Node
+
+class WalkingService(Node):
+    def __init__(self):
+        super().__init__('walking_service')
+        self.srv = self.create_service(Trigger, 'execute_walk', self.execute_walk_callback)
+
+    def execute_walk_callback(self, request, response):
+        self.get_logger().info('Executing walking sequence')
+        # Execute walking logic here
+        response.success = True
+        response.message = 'Walking sequence completed'
+        return response
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = WalkingService()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+```
+
+## Actions: Goal-Oriented Communication
+
+Actions are designed for long-running tasks that might take time to complete. They provide feedback during execution and can be canceled. Actions have three parts: goal, feedback, and result.
+
+Actions are ideal for:
+- Complex, long-running tasks (navigation, manipulation)
+- Tasks that benefit from intermediate feedback
+- Operations that might need to be canceled
+
+### Humanoid Example: Navigation Action
+
+A humanoid robot's navigation system would typically use actions to move to a goal location:
+
+```python
+from rclpy.action import ActionServer
+from rclpy.node import Node
+from nav2_msgs.action import NavigateToPose
+import rclpy
+
+class NavigationActionServer(Node):
+    def __init__(self):
+        super().__init__('navigation_action_server')
+        self._action_server = ActionServer(
+            self,
+            NavigateToPose,
+            'navigate_to_pose',
+            self.execute_callback)
+
+    async def execute_callback(self, goal_handle):
+        self.get_logger().info('Executing navigation goal...')
+
+        # Execute navigation logic here
+        # Send feedback periodically
+        feedback_msg = NavigateToPose.Feedback()
+
+        # Simulate navigation progress
+        for i in range(10):
+            if goal_handle.is_canceling():
+                goal_handle.canceled()
+                return NavigateToPose.Result()
+
+            # Update feedback
+            feedback_msg.current_pose = ...  # Update current position
+            goal_handle.publish_feedback(feedback_msg)
+
+            # Simulate navigation step
+            await rclpy.sleep(1.0)
+
+        goal_handle.succeed()
+        result = NavigateToPose.Result()
+        result.result = ...  # Return final result
+        return result
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = NavigationActionServer()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+```
+
+## Message Passing and Real-Time Considerations
+
+When designing communication patterns for humanoid robots, real-time considerations are crucial:
+
+### Latency Requirements
+- Safety-critical systems: < 1ms
+- Balance control: < 10ms
+- Basic motion control: < 50ms
+- High-level planning: < 100ms
+
+### Quality of Service (QoS) Settings
+ROS 2 provides QoS settings to control how messages are handled:
+
+```python
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSReliabilityPolicy
+
+# For safety-critical topics (e.g., emergency stop)
+qos_profile = QoSProfile(
+    depth=1,
+    durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+    reliability=QoSReliabilityPolicy.RELIABLE
+)
+
+publisher = self.create_publisher(EmergencyStop, '/emergency_stop', qos_profile)
+```
+
+## When to Use Each Primitive
+
+### Use Topics when:
+- You need to broadcast continuous data
+- Multiple nodes need to receive the same information
+- The publisher doesn't need to know if anyone is listening
+- Data is time-sensitive (e.g., sensor streams)
+
+### Use Services when:
+- You need a clear request/response pattern
+- The operation has a defined start and end
+- You need to ensure the operation completed successfully
+- The operation is synchronous and blocking is acceptable
+
+### Use Actions when:
+- The operation will take a long time to complete
+- You need to provide feedback during execution
+- The operation might need to be canceled
+- You need to track progress toward a goal
+
+## Summary
+
+Understanding when to use Nodes, Topics, Services, and Actions is fundamental to designing effective robotic systems. Each primitive serves a specific purpose in the robotic nervous system, and choosing the right one for each communication need is crucial for creating robust, efficient, and maintainable robot software.
+
+In the next chapter, we'll explore how to connect AI agents to robot bodies using these communication primitives.

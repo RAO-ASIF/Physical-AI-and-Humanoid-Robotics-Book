@@ -1,0 +1,60 @@
+# Search API Contract for Module 3 & 4 Content
+
+## Overview
+API contract for searching content within Module 3 and Module 4 documentation.
+
+## Endpoints
+
+### Search Documentation
+```
+GET /api/search
+```
+
+#### Parameters
+- `query` (string, required): Search query text
+- `module` (string, optional): Filter by module (e.g., "module-3", "module-4")
+- `chapter` (string, optional): Filter by specific chapter
+- `limit` (integer, optional): Maximum number of results (default: 10, max: 50)
+
+#### Response
+```json
+{
+  "results": [
+    {
+      "id": "string",
+      "title": "string",
+      "module": "string",
+      "chapter": "string",
+      "url": "string",
+      "excerpt": "string",
+      "relevance": "number"
+    }
+  ],
+  "total": "number",
+  "query": "string"
+}
+```
+
+#### Example Request
+```
+GET /api/search?query=embodied+intelligence&module=module-3&limit=5
+```
+
+#### Example Response
+```json
+{
+  "results": [
+    {
+      "id": "module-3-chapter-1-section-3",
+      "title": "Fundamentals of Embodied Intelligence",
+      "module": "module-3",
+      "chapter": "chapter-1-embodied-intelligence-fundamentals",
+      "url": "/docs/module-3-embodied-intelligence/chapter-1-embodied-intelligence-fundamentals#fundamentals",
+      "excerpt": "Embodied intelligence refers to intelligence that is...",
+      "relevance": 0.95
+    }
+  ],
+  "total": 1,
+  "query": "embodied intelligence"
+}
+```
