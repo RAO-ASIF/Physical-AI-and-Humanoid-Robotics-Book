@@ -20,7 +20,7 @@ const config = {
   },
 
   // Set the production url of your site here
-  url: 'https://physical-ai-and-humanoid-robotics-book-ygt8.vercel.app',
+  url: 'https://physical-ai-and-humanoid-robotics-b-sooty.vercel.app',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: '/',
