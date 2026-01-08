@@ -232,6 +232,8 @@ See `.specify/memory/constitution.md` for code quality, testing, performance, se
 - N/A (No persistent storage for this setup task) (001-wsl-vscode-rag-setup)
 - Python 3.11 + FastAPI, Qdrant Client, Cohere API, Pydantic, Pydantic Settings, BeautifulSoup4, Requests, python-dotenv (001-config-normalization)
 - Qdrant Cloud (vector storage), PostgreSQL via Neon Serverless (metadata), local file system for temporary processing (001-config-normalization)
+- Python 3.11 + uv (package manager), Cohere API client, Qdrant client, BeautifulSoup4, requests, python-dotenv (009-url-embedding-ingestion)
+- Qdrant Cloud (vector database), temporary file system storage for processing (009-url-embedding-ingestion)
 
 ## Recent Changes
 - 001-physical-ai-ros2: Added Node.js LTS (18+ or 20+), Docusaurus 3.x, Python examples using rclpy for ROS 2 Humble Hawksbill + Docusaurus (classic template), Node.js, npm, ROS 2 Humble Hawksbill, rclpy
